@@ -100,6 +100,7 @@ def freeze_parameters(model: nn.Module,
             p.requires_grad = False
 
     if len(freeze_parameters) > 0:
+        freeze_parameters = freeze_parameters[0].split(',')
         for n, p in model.named_parameters():
             for freeze_p in freeze_parameters:
                 if n.startswith(freeze_p):

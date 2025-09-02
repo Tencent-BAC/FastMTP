@@ -360,6 +360,21 @@ class Seq2SeqTrainer(SwiftMixin, DataLoaderMixin, HfSeq2SeqTrainer):
             if num_items_in_batch is not None:
                 outputs.loss = outputs.loss * ((labels[:, 1:] != -100).sum() / num_items_in_batch)
 
+                loss_mtp = getattr(outputs, 'loss_mtp', None)
+                loss_ntp = getattr(outputs, 'loss_ntp', None)
+                
+                if loss_mtp is not None and loss_ntp is not None:
+                    outputs.loss_ntp = loss_ntp * ((labels[:, 1:] != -100).sum() / num_items_in_batch)
+                    outputs.loss_mtp = loss_mtp * ((labels[:, 1:] != -100).sum() / num_items_in_batch)
+                    
+                    loss_mtp_all = getattr(outputs, 'loss_mtp_all', None)
+                    if loss_mtp_all is not None:
+                        new_loss_mtp_all = tuple(
+                            loss * ((labels[:, 1:] != -100).sum() / num_items_in_batch)
+                            for loss in loss_mtp_all
+                        )
+                        outputs["loss_mtp_all"] = new_loss_mtp_all
+
             if isinstance(outputs, dict) and 'loss' not in outputs:
                 raise ValueError(
                     'The model did not return a loss from the inputs, only the following keys: '
@@ -386,6 +401,16 @@ class Seq2SeqTrainer(SwiftMixin, DataLoaderMixin, HfSeq2SeqTrainer):
 
         if getattr(self.args, 'average_tokens_across_devices', False) and self.model_accepts_loss_kwargs:
             loss *= self.accelerator.num_processes
+
+            loss_mtp = getattr(outputs, 'loss_mtp', None)
+            loss_ntp = getattr(outputs, 'loss_ntp', None)
+            if loss_mtp is not None and loss_ntp is not None:
+                outputs.loss_mtp *= self.accelerator.num_processes
+                outputs.loss_ntp *= self.accelerator.num_processes
+                loss_mtp_all = getattr(outputs, 'loss_mtp_all', None)
+                if loss_mtp_all is not None:
+                    new_loss_mtp_all = tuple(loss * self.accelerator.num_processes for loss in outputs["loss_mtp_all"])
+                    outputs["loss_mtp_all"] = new_loss_mtp_all
 
         if (outputs.logits is not None and labels is not None and not return_outputs
                 and self.args.tuner_backend != 'unsloth'):

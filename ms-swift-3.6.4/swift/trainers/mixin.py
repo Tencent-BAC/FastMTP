@@ -446,6 +446,28 @@ class SwiftMixin:
             loss = tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged)
             logs: Dict[str, float] = {'loss': loss}  # loss first
 
+            tr_loss_ntp = kwargs.get('tr_loss_ntp', None)
+            if tr_loss_ntp is not None:
+                tr_loss_ntp_scalar = self._nested_gather(tr_loss_ntp).mean().item()
+                loss_ntp = tr_loss_ntp_scalar / (self.state.global_step - self._globalstep_last_logged)
+                logs['loss_ntp'] = loss_ntp
+                tr_loss_ntp -= tr_loss_ntp
+
+            tr_loss_mtp = kwargs.get('tr_loss_mtp', None)
+            if tr_loss_mtp is not None:
+                tr_loss_mtp_scalar = self._nested_gather(tr_loss_mtp).mean().item()
+                loss_mtp = tr_loss_mtp_scalar / (self.state.global_step - self._globalstep_last_logged)
+                logs['loss_mtp'] = loss_mtp
+                tr_loss_mtp -= tr_loss_mtp
+
+            tr_loss_mtp_all = kwargs.get('tr_loss_mtp_all', None)
+            if tr_loss_mtp_all is not None:
+                for i in range(len(tr_loss_mtp_all)):
+                    tr_loss_mtp_all_scalar = self._nested_gather(tr_loss_mtp_all[i]).mean().item()
+                    tr_loss_mtp_all_scalar = tr_loss_mtp_all_scalar / (self.state.global_step - self._globalstep_last_logged)
+                    logs[f'loss_mtp_{i}'] = tr_loss_mtp_all_scalar
+                    tr_loss_mtp_all[i] -= tr_loss_mtp_all[i]
+
             for k, metric in self._custom_metrics.items():
                 value = metric.compute()
                 if len(value) == 1:
@@ -458,7 +480,7 @@ class SwiftMixin:
                 metric.reset()
 
             if version.parse(transformers.__version__) >= version.parse('4.38'):
-                grad_norm = args[0]
+                grad_norm = kwargs.get('grad_norm')
                 if grad_norm is not None:
                     logs['grad_norm'] = grad_norm.item() if isinstance(grad_norm, torch.Tensor) else grad_norm
             logs['learning_rate'] = self._get_learning_rate()
