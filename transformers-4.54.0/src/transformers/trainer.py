@@ -2478,6 +2478,13 @@ class Trainer:
 
         # tr_loss is a tensor to avoid synchronization of TPUs through .item()
         tr_loss = torch.tensor(0.0, device=args.device)
+        if hasattr(self.model.config, 'num_speculative_steps'):
+            tr_loss_ntp = torch.tensor(0.0, device=args.device)
+            tr_loss_mtp = torch.tensor(0.0, device=args.device)
+            tr_loss_mtp_all = {}
+            for i in range(self.model.config.num_speculative_steps):
+                tr_loss_mtp_all[i] = torch.tensor(0.0, device=args.device)
+
         # _total_loss_scalar is updated everytime .item() has to be called on tr_loss and stores the sum of all losses
         self._total_loss_scalar = 0.0
         self._globalstep_last_logged = self.state.global_step
@@ -2575,7 +2582,10 @@ class Trainer:
                         else contextlib.nullcontext
                     )
                     with context():
-                        tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+                        if hasattr(self.model.config, 'num_speculative_steps'):
+                            tr_loss_step, tr_loss_ntp_step, tr_loss_mtp_step, tr_loss_mtp_all_step = self.training_step(model, inputs, num_items_in_batch)
+                        else:
+                            tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
 
                     if (
                         args.logging_nan_inf_filter
@@ -2590,6 +2600,11 @@ class Trainer:
                                 f"Calculated loss must be on the original device: {tr_loss.device} but device in use is {tr_loss_step.device}"
                             )
                         tr_loss = tr_loss + tr_loss_step
+                        if hasattr(self.model.config, 'num_speculative_steps'):
+                            tr_loss_ntp = tr_loss_ntp + tr_loss_ntp_step
+                            tr_loss_mtp = tr_loss_mtp + tr_loss_mtp_step
+                            for i in range(self.model.config.num_speculative_steps):
+                                tr_loss_mtp_all[i] = tr_loss_mtp_all[i] + tr_loss_mtp_all_step[i].detach()
 
                     self.current_flos += float(self.floating_point_ops(inputs))
 
@@ -2658,14 +2673,17 @@ class Trainer:
                         self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
                         self.control = self.callback_handler.on_step_end(args, self.state, self.control)
                         self._maybe_log_save_evaluate(
-                            tr_loss,
-                            grad_norm,
-                            model,
-                            trial,
-                            epoch,
-                            ignore_keys_for_eval,
-                            start_time,
+                            tr_loss=tr_loss,
+                            grad_norm=grad_norm,
+                            model=model,
+                            trial=trial,
+                            epoch=epoch,
+                            ignore_keys_for_eval=ignore_keys_for_eval,
+                            start_time=start_time,
                             learning_rate=learning_rate,
+                            tr_loss_ntp=tr_loss_ntp if hasattr(self.model.config, 'num_speculative_steps') else None,
+                            tr_loss_mtp=tr_loss_mtp if hasattr(self.model.config, 'num_speculative_steps') else None,
+                            tr_loss_mtp_all=tr_loss_mtp_all if hasattr(self.model.config, 'num_speculative_steps') else None
                         )
                     else:
                         self.control = self.callback_handler.on_substep_end(args, self.state, self.control)
@@ -2692,7 +2710,12 @@ class Trainer:
 
             self.control = self.callback_handler.on_epoch_end(args, self.state, self.control)
             self._maybe_log_save_evaluate(
-                tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval, start_time, learning_rate=learning_rate
+                tr_loss=tr_loss, grad_norm=grad_norm, model=model, trial=trial, 
+                epoch=epoch, ignore_keys_for_eval=ignore_keys_for_eval, start_time=start_time, 
+                learning_rate=learning_rate,
+                tr_loss_ntp=tr_loss_ntp if hasattr(self.model.config, 'num_speculative_steps') else None,
+                tr_loss_mtp=tr_loss_mtp if hasattr(self.model.config, 'num_speculative_steps') else None,
+                tr_loss_mtp_all=tr_loss_mtp_all if hasattr(self.model.config, 'num_speculative_steps') else None
             )
 
             if DebugOption.TPU_METRICS_DEBUG in self.args.debug:
@@ -3100,7 +3123,8 @@ class Trainer:
         return metrics
 
     def _maybe_log_save_evaluate(
-        self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval, start_time, learning_rate=None
+        self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval, start_time, learning_rate=None,
+        tr_loss_ntp=None, tr_loss_mtp=None, tr_loss_mtp_all=None
     ):
         if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
             if is_torch_xla_available():
@@ -3115,6 +3139,24 @@ class Trainer:
             tr_loss -= tr_loss
 
             logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+
+            if tr_loss_ntp is not None:
+                tr_loss_ntp_scalar = self._nested_gather(tr_loss_ntp).mean().item()
+                tr_loss_ntp -= tr_loss_ntp
+                logs["loss_ntp"] = round(tr_loss_ntp_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+
+            if tr_loss_mtp is not None:
+                tr_loss_mtp_scalar = self._nested_gather(tr_loss_mtp).mean().item()
+                tr_loss_mtp -= tr_loss_mtp
+                logs["loss_mtp"] = round(tr_loss_mtp_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+
+            if tr_loss_mtp_all is not None:
+                for i in range(self.model.config.num_speculative_steps):
+                    logs[f"mtp_loss_{i}"] = round(
+                        self._nested_gather(tr_loss_mtp_all[i]).mean().item() / (self.state.global_step - self._globalstep_last_logged), 4
+                    )
+                    tr_loss_mtp_all[i] -= tr_loss_mtp_all[i]
+
             if grad_norm is not None:
                 logs["grad_norm"] = grad_norm.item() if isinstance(grad_norm, torch.Tensor) else grad_norm
             if learning_rate is not None:
@@ -3789,7 +3831,10 @@ class Trainer:
             return loss_mb.reduce_mean().detach().to(self.args.device)
 
         with self.compute_loss_context_manager():
-            loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+            if hasattr(self.model.config, 'num_speculative_steps'):
+                loss, outputs = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch, return_outputs=True)
+            else:
+                loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
 
         del inputs
         if (
@@ -3839,7 +3884,10 @@ class Trainer:
 
             self.accelerator.backward(loss, **kwargs)
 
-            return loss.detach()
+            if hasattr(self.model.config, 'num_speculative_steps'):
+                return loss.detach(), outputs["loss_ntp"].detach(), outputs["loss_mtp"].detach(), outputs["loss_mtp_all"]
+            else:
+                return loss.detach()
 
     def compute_loss(
         self,

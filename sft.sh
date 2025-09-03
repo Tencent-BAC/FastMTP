@@ -3,8 +3,6 @@ per_device_batch_size=1
 nproc_per_node=8
 gradient_accumulation_step=8
 max_length_token=4096
-total_train_batch_size=$(( $per_device_batch_size * $nproc_per_node * $gradient_accumulation_step ))
-# 1*8*8=64
 
 # Model and Data Paths (Please modify according to your setup)
 model_path=/absolute/path/to/model/MiMo-7B-RL
@@ -39,3 +37,4 @@ swift sft \
     --dataset_num_proc 8 \
     --output_dir $output_path \
     --attn_impl flash_attn
+    

@@ -199,6 +199,7 @@ if TYPE_CHECKING:
     from .megatron_gpt2 import *
     from .mgp_str import *
     from .mimi import *
+    from .mimo import *
     from .minimax import *
     from .mistral import *
     from .mistral3 import *
