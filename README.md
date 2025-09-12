@@ -9,6 +9,9 @@
 <a href="https://huggingface.co/TencentBAC/FastMTP" target="_blank">
     <img alt="HF Model: Cambrian-1" src="https://img.shields.io/badge/%F0%9F%A4%97%20_Huggingface-Models-ffc107?color=ffc107&logoColor=white" height="23" />
 </a>
+<a href="https://modelscope.cn/models/TencentBAC/FastMTP" target="_blank">
+    <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Models-634aff" height="23" />
+</a>
 
 </div>
 
@@ -135,6 +138,30 @@ python3 bench_sglang_eagle.py \
   --max-gen-length 1024 \
   --answer-file <answer_file> \
   --result-file <result_file>
+```
+
+You can also send a request and stream the output:
+
+``` python
+import openai
+
+client = openai.Client(base_url=f"http://127.0.0.1:{port}/v1", api_key="None")
+
+# Use stream=True for streaming responses
+response = client.chat.completions.create(
+    model="default",
+    messages=[
+        {"role": "user", "content": "What is the capital of France?"},
+    ],
+    temperature=0,
+    max_tokens=2048,
+    stream=True,
+)
+
+# Handle the streaming output
+for chunk in response:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
 ## Acknowledgments
