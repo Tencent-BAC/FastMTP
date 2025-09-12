@@ -6,11 +6,11 @@
 <!-- <a href="https://github.com/yukiwayx/FastMTP" target="_blank">
     <img alt="arXiv" src="https://img.shields.io/badge/arXiv-1234.56789-b31b1b.svg" height="23" />
 </a> -->
-<a href="https://huggingface.co/TencentBAC/FastMTP" target="_blank">
-    <img alt="HF Model: Cambrian-1" src="https://img.shields.io/badge/%F0%9F%A4%97%20_Huggingface-Models-ffc107?color=ffc107&logoColor=white" height="23" style="border: none;"/>
+<a href="https://huggingface.co/TencentBAC/FastMTP" target="_blank" style="text-decoration: none;">
+    <img alt="HF Model: Cambrian-1" src="https://img.shields.io/badge/%F0%9F%A4%97%20_Huggingface-Models-ffc107?color=ffc107&logoColor=white" height="23"/>
 </a>
-<a href="https://modelscope.cn/models/TencentBAC/FastMTP" target="_blank">
-    <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Models-634aff" height="23" style="border: none;"/>
+<a href="https://modelscope.cn/models/TencentBAC/FastMTP" target="_blank" style="text-decoration: none;">
+    <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Models-634aff" height="23"/>
 </a>
 
 </div>
