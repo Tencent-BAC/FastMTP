@@ -3,15 +3,13 @@
 
 # *FastMTP:* Accelerating LLM Inference with <br>Enhanced Multi-Token Prediction
 
-<!-- <a href="https://github.com/yukiwayx/FastMTP" target="_blank">
-    <img alt="arXiv" src="https://img.shields.io/badge/arXiv-1234.56789-b31b1b.svg" height="23" />
-</a> -->
-<a href="https://huggingface.co/TencentBAC/FastMTP" target="_blank" style="text-decoration: none;">
-    <img alt="HF Model: Cambrian-1" src="https://img.shields.io/badge/%F0%9F%A4%97%20_Huggingface-Models-ffc107?color=ffc107&logoColor=white" height="23"/>
-</a>
-<a href="https://modelscope.cn/models/TencentBAC/FastMTP" target="_blank" style="text-decoration: none;">
-    <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Models-634aff" height="23"/>
-</a>
+<div align="center" style="line-height: 1;">
+
+[![ARXIV](https://img.shields.io/badge/arXiv-2509.18362-b31b1b)](https://arxiv.org/abs/2509.18362)
+[![MODEL-HF](https://img.shields.io/badge/%F0%9F%A4%97%20_Huggingface-Models-ffc107?color=ffc107&logoColor=white)](https://huggingface.co/TencentBAC/FastMTP)
+[![MODEL-MODELSCOPE](https://img.shields.io/badge/ModelScope-Models-634aff)](https://modelscope.cn/models/TencentBAC/FastMTP)
+
+</div>
 
 </div>
 
@@ -19,9 +17,7 @@
 
 We present FastMTP, a simple yet effective method that enhances Multi-Token Prediction (MTP) for speculative decoding during inference. Our approach fine-tunes a single MTP head with shared weights across multiple causal draft steps, enabling it to capture longer-range dependencies and achieve higher acceptance rates in speculative decoding. By integrating language-aware vocabulary compression into the MTP head, we further reduce computational overhead during draft generation. Experimental results across diverse benchmarks demonstrate that FastMTP achieves an average of **2.03× speedup** compared over vanilla next token prediction while maintaining lossless output quality. With low training cost and seamless integration into existing inference frameworks, FastMTP offers a practical and rapidly deployable solution for accelerating LLM inference.
 
-<!-- 🌟 For more details, please refer to our [technical report](https://github.com/yukiwayx/FastMTP). -->
-
-🌟 For more details, please refer to our technical report (coming soon).
+🌟 For more details, please refer to our [technical report](https://arxiv.org/abs/2509.18362).
 
 <div align="center">
   <img src="assets/radar_chart.png"  width="500px">
@@ -114,7 +110,7 @@ python3 -m sglang.launch_server \
 
 Note: Use the original ```config.json``` in ```<model_path>``` for evaluation.
 
-Model weights are available on Huggingface ([see here](https://huggingface.co/TencentBAC/FastMTP/tree/main/models)).
+Model weights are available on Huggingface ([see here](https://huggingface.co/TencentBAC/FastMTP)).
 
 Processed language-aware high-frequency token vocabularies (based on the ```Qwen2Tokenizer```) are available for download on Huggingface:
 
@@ -178,8 +174,8 @@ If you find the resources in this repository useful, please cite our paper:
 ``` bib
 @article{cai2025fastmtp,
   title={FastMTP: Accelerating LLM Inference with Enhanced Multi-Token Prediction},
-  author={Cai, Yuxuan and Liang, Xiaozhuan and Wang, Xinghua and Yin, Yuyang and Chen, Xi},
-  journal={arXiv preprint arXiv:2509.xxxx},
+  author={Cai, Yuxuan and Liang, Xiaozhuan and Wang, Xinghua and Ma, Jin and Liang, Haijin and Luo, Jinwen and Zuo, Xinyu and Duan, Lisheng and Yin, Yuyang and Chen, Xi},
+  journal={arXiv preprint arXiv:2509.18362},
   year={2025}
 }
 ```
